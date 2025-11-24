@@ -1,5 +1,0 @@
-sceneSetups:
-- path: Assets/3D Laboratory Environment with Appratus/Scenes/Laboratory Scene.unity
-  isLoaded: 1
-  isActive: 1
-  isSubScene: 0
