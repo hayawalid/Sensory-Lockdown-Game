@@ -11,37 +11,32 @@ public class VialGlow : MonoBehaviour
 
     void Start()
     {
+        // Search in this object and all its children for a renderer
         rend = GetComponentInChildren<Renderer>();
-        if (rend == null)
+        
+        if (rend != null)
         {
-            Debug.LogError("VialGlow: No Renderer found on " + gameObject.name);
-            return;
-        }
-
-        mat = rend.material;
-        if (mat.HasProperty("_EmissionColor"))
-        {
-            originalColor = mat.GetColor("_EmissionColor");
+            // Ensure the material supports Emission before trying to get color
+            if (rend.material.HasProperty("_EmissionColor"))
+                originalColor = rend.material.GetColor("_EmissionColor");
         }
         else
         {
-            Debug.LogWarning("VialGlow: Material on " + gameObject.name + " has no _EmissionColor property.");
-            originalColor = Color.black;
+            Debug.LogError($"[VialGlow] No Renderer found on {gameObject.name} or its children!");
         }
     }
 
     public void GlowOn()
     {
-        if (mat == null) return;
-
-        mat.EnableKeyword("_EMISSION");
-        mat.SetColor("_EmissionColor", glowColor * glowIntensity);
+        if (rend == null) return; // Prevents the NullReferenceException
+        
+        rend.material.EnableKeyword("_EMISSION");
+        rend.material.SetColor("_EmissionColor", glowColor * glowIntensity);
     }
 
     public void GlowOff()
     {
-        if (mat == null) return;
-
-        mat.SetColor("_EmissionColor", originalColor);
+        if (rend == null) return;
+        rend.material.SetColor("_EmissionColor", originalColor);
     }
 }

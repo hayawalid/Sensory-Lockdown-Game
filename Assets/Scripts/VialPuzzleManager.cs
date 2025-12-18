@@ -14,6 +14,7 @@ public class VialPuzzleManager : MonoBehaviour
     private List<VialClickMover> sequence = new List<VialClickMover>();
     private int playerIndex = 0;
     private bool playerTurn = false;
+    public ColorFeedbackManager feedbackManager;
 
     void Start()
     {
@@ -51,13 +52,15 @@ public class VialPuzzleManager : MonoBehaviour
 
     public void PlayerSelected(VialClickMover vial)
     {
-        if (!playerTurn)
-            return;
+        if (!playerTurn) return;
 
         // ✅ Correct vial
         if (vial == sequence[playerIndex])
         {
             playerIndex++;
+            // 2. Call the AI feedback for a correct move
+            if(feedbackManager != null) 
+                feedbackManager.OnCorrectSelection(playerIndex, sequence.Count);
 
             // ✅ WIN CONDITION
             if (playerIndex >= sequence.Count)
@@ -70,15 +73,21 @@ public class VialPuzzleManager : MonoBehaviour
         else
         {
             Debug.Log("Wrong vial!");
+            // 3. Call the AI feedback for a wrong move
+            if(feedbackManager != null) 
+                feedbackManager.OnWrongSelection();
+            
             playerTurn = false;
             OnPuzzleFail();
         }
     }
 
+    // 4. Reset color when replaying
     public void ReplaySequence()
     {
         GenerateSequence();
 
+        if(feedbackManager != null) feedbackManager.ResetToGrayscale();
         StartCoroutine(PlaySequence());
     }
 
@@ -107,3 +116,4 @@ public class VialPuzzleManager : MonoBehaviour
         // - Allow replay
     }
 }
+
