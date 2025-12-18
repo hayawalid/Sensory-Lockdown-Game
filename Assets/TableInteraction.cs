@@ -85,6 +85,8 @@ public class TableInteraction : MonoBehaviour
                     if (mover != null)
                     {
                         selectedVial = mover;   // ✅ store clicked vial
+                        mover.ResetTilt();
+
                         mover.ToggleMove();     // optional: your up/down movement
                     }
                 }
@@ -147,6 +149,9 @@ public class TableInteraction : MonoBehaviour
 
         if (replayButton != null)
             replayButton.SetActive(true);   // ✅ Show replay button in puzzle mode
+
+        if (puzzleManager != null)
+            puzzleManager.ReplaySequence();
 
         puzzleCamera.SetParent(null);
         StartCoroutine(TransitionCameraToPuzzle());

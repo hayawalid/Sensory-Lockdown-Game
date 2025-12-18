@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -9,6 +9,7 @@ public class VialPuzzleManager : MonoBehaviour
     public int sequenceLength = 3;
     public float glowDuration = 0.7f;
     public float glowDelay = 0.3f;
+    public BowlFlash bowlFlash;
 
     private List<VialClickMover> sequence = new List<VialClickMover>();
     private int playerIndex = 0;
@@ -17,7 +18,7 @@ public class VialPuzzleManager : MonoBehaviour
     void Start()
     {
         GenerateSequence();
-        StartCoroutine(PlaySequence());
+       // StartCoroutine(PlaySequence());
     }
 
     void GenerateSequence()
@@ -53,26 +54,56 @@ public class VialPuzzleManager : MonoBehaviour
         if (!playerTurn)
             return;
 
+        // ✅ Correct vial
         if (vial == sequence[playerIndex])
         {
-            // correct
             playerIndex++;
 
+            // ✅ WIN CONDITION
             if (playerIndex >= sequence.Count)
             {
                 Debug.Log("Puzzle Completed!");
                 playerTurn = false;
+                OnPuzzleWin();
             }
         }
         else
         {
             Debug.Log("Wrong vial!");
             playerTurn = false;
+            OnPuzzleFail();
         }
     }
 
     public void ReplaySequence()
     {
+        GenerateSequence();
+
         StartCoroutine(PlaySequence());
+    }
+
+    // ✅ Called when the player wins
+    void OnPuzzleWin()
+    {
+        Debug.Log("PLAYER WON THE PUZZLE!");
+        if (bowlFlash != null) 
+            bowlFlash.Flash();
+
+        // Add anything you want here:
+        // - Play animation
+        // - Show UI
+        // - Unlock next step
+        // - Trigger bowl effect
+    }
+
+    // ✅ Called when the player fails
+    void OnPuzzleFail()
+    {
+        Debug.Log("PLAYER FAILED THE PUZZLE!");
+
+        // Optional:
+        // - Flash red
+        // - Reset puzzle
+        // - Allow replay
     }
 }
