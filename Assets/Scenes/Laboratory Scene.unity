@@ -23127,7 +23127,8 @@ MonoBehaviour:
   sequenceLength: 3
   glowDuration: 0.7
   glowDelay: 0.3
-  bowlFlash: {fileID: 0}
+  bowlFlash: {fileID: 15432178}
+  successAnimation: {fileID: 586205604}
   feedbackManager: {fileID: 329498809}
 --- !u!4 &280079934
 Transform:
@@ -27324,7 +27325,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
-  m_PlayOnAwake: 1
+  m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
   Loop: 0
@@ -27426,8 +27427,6 @@ MonoBehaviour:
   cameraTarget: {fileID: 476167857}
   audioSource: {fileID: 586205603}
   successSound: {fileID: 8300000, guid: c3399e92806993e4e83420ce0f766289, type: 3}
-  successPanel: {fileID: 0}
-  successText: {fileID: 0}
   shakeIntensity: 0.1
   shakeDuration: 0.3
 --- !u!4 &586205605
@@ -33138,7 +33137,7 @@ ParticleSystem:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 995718876}
   serializedVersion: 8
-  lengthInSec: 2
+  lengthInSec: 3
   simulationSpeed: 1
   stopAction: 0
   cullingMode: 0
@@ -33147,7 +33146,7 @@ ParticleSystem:
   emitterVelocityMode: 1
   looping: 0
   prewarm: 0
-  playOnAwake: 1
+  playOnAwake: 0
   useUnscaledTime: 0
   autoRandomSeed: 1
   startDelay:
@@ -75392,7 +75391,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: -50}
+  m_AnchoredPosition: {x: 0, y: -70}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1700246773

@@ -49,6 +49,9 @@ public class VialPuzzleManager : MonoBehaviour
         }
 
         playerTurn = true;
+
+        //if (successAnimation != null)
+        //    successAnimation.PlaySuccess();
     }
 
     public void PlayerSelected(VialClickMover vial)
