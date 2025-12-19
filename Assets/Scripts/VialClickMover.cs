@@ -3,7 +3,7 @@
 public class VialClickMover : MonoBehaviour
 {
     // UP/DOWN MOVEMENT
-    private bool isUp = false;
+    public bool isUp = false;
     public float moveAmount = 0.2f;
     public float moveSpeed = 5f;
 
@@ -32,14 +32,23 @@ public class VialClickMover : MonoBehaviour
         isUp = !isUp;
 
         if (isUp)
+        {
             targetPos = originalPos + Vector3.up * moveAmount;
+        }
         else
+        {
             targetPos = originalPos;
+
+            // ✅ Auto-reset tilt when moving down
+            ResetTilt();
+        }
     }
 
-    // Q = TILT + FADE
+    // Q = TILT + FADE (only if vial is up)
     public void Tilt()
     {
+        if (!isUp) return; // ✅ Prevent tilt if vial is down
+
         transform.localRotation = Quaternion.Euler(0, 0, tiltAngle);
 
         if (pourScript != null)
@@ -59,4 +68,6 @@ public class VialClickMover : MonoBehaviour
     {
         transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * moveSpeed);
     }
+    public bool IsUp => isUp;
+
 }

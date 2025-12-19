@@ -10,6 +10,7 @@ public class VialPuzzleManager : MonoBehaviour
     public float glowDuration = 0.7f;
     public float glowDelay = 0.3f;
     public BowlFlash bowlFlash;
+    public SuccessAnimation successAnimation;
 
     private List<VialClickMover> sequence = new List<VialClickMover>();
     private int playerIndex = 0;
@@ -98,6 +99,8 @@ public class VialPuzzleManager : MonoBehaviour
         if (bowlFlash != null) 
             bowlFlash.Flash();
 
+        if (successAnimation != null) 
+            successAnimation.PlaySuccess();
         // Add anything you want here:
         // - Play animation
         // - Show UI

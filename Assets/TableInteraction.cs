@@ -16,7 +16,7 @@ public class TableInteraction : MonoBehaviour
     public ColorFeedbackManager colorFeedback;
 
     [Header("Filter Setup")]
-    public MeshRenderer filterCubeRenderer; 
+    public MeshRenderer filterCubeRenderer;
     public float puzzleSaturation = 0.3f;
 
     [Header("Settings")]
@@ -63,7 +63,7 @@ public class TableInteraction : MonoBehaviour
         if (isPuzzleView && !isTransitioning)
         {
             // Exit logic
-            if (Input.GetKeyDown(exitKey)) 
+            if (Input.GetKeyDown(exitKey))
                 ExitPuzzleView();
 
             // --- CAMERA MOVEMENT ---
@@ -85,11 +85,12 @@ public class TableInteraction : MonoBehaviour
                     if (mover != null)
                     {
                         // Reset previous vial if necessary, then select new one
-                        if (selectedVial != null && selectedVial != mover) 
+                        if (selectedVial != null && selectedVial != mover)
                             selectedVial.ResetTilt();
 
                         selectedVial = mover;
-                        mover.ToggleMove();
+                        mover.ResetTilt();   // ✅ always reset tilt when clicked
+                        mover.ToggleMove();  // ✅ move up/down
                     }
                 }
             }
@@ -97,9 +98,13 @@ public class TableInteraction : MonoBehaviour
             // --- POUR LIQUID (Q) ---
             if (Input.GetKeyDown(KeyCode.Q) && selectedVial != null)
             {
-                selectedVial.Tilt();
-                if (puzzleManager != null)
-                    puzzleManager.PlayerSelected(selectedVial);
+                // ✅ Only tilt if vial is up
+                if (selectedVial.IsUp)
+                {
+                    selectedVial.Tilt();
+                    if (puzzleManager != null)
+                        puzzleManager.PlayerSelected(selectedVial);
+                }
             }
 
             // --- RESET VIAL (R) ---
@@ -117,7 +122,7 @@ public class TableInteraction : MonoBehaviour
 
         if (filterCubeRenderer != null) filterCubeRenderer.enabled = true;
         if (playerMovement != null) playerMovement.enabled = false;
-        
+
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
@@ -163,8 +168,7 @@ public class TableInteraction : MonoBehaviour
 
         float distance = 1.1f;
         Vector3 forward = transform.forward;
-        
-        // Using the "LookAtPoint" logic from your merge
+
         Vector3 lookAtPoint = transform.position - transform.right * 1.5f;
         Vector3 targetPos = lookAtPoint - forward * distance + Vector3.up * 0.35f;
         Quaternion targetRot = Quaternion.LookRotation(lookAtPoint - targetPos);
@@ -187,9 +191,9 @@ public class TableInteraction : MonoBehaviour
         Vector3 startPos = puzzleCamera.position;
         Quaternion startRot = puzzleCamera.rotation;
 
-        Vector3 targetWorldPos = (originalCameraParent != null) ? 
+        Vector3 targetWorldPos = (originalCameraParent != null) ?
             originalCameraParent.TransformPoint(originalLocalPosition) : originalLocalPosition;
-        Quaternion targetWorldRot = (originalCameraParent != null) ? 
+        Quaternion targetWorldRot = (originalCameraParent != null) ?
             originalCameraParent.rotation * originalLocalRotation : originalLocalRotation;
 
         while (elapsed < 1f)
@@ -206,7 +210,7 @@ public class TableInteraction : MonoBehaviour
 
         isTransitioning = false;
         if (playerMovement != null) playerMovement.enabled = true;
-        
+
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
