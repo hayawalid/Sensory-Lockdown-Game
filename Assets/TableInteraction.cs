@@ -1,41 +1,49 @@
-using UnityEngine;
+﻿using UnityEngine;
 using TMPro;
+using System.Collections;
 
 public class TableInteraction : MonoBehaviour
 {
     [Header("UI References")]
-    public GameObject notificationBox; // The cute notification box
-    public TextMeshProUGUI notificationText; // The text inside the box
-    
+    public GameObject notificationBox;
+    public TextMeshProUGUI notificationText;
+    public GameObject replayButton;
+
     [Header("Puzzle Scene")]
-    public Transform puzzleCamera; // The camera from your player's head
-    public Transform puzzleViewPosition; // Where camera should move to view the puzzle
+    public Transform puzzleCamera;
     public float transitionSpeed = 5f;
-    
+    public VialPuzzleManager puzzleManager;
+    public ColorFeedbackManager colorFeedback;
+
+    [Header("Filter Setup")]
+    public MeshRenderer filterCubeRenderer;
+    public float puzzleSaturation = 0.3f;
+
     [Header("Settings")]
-    public KeyCode interactKey = KeyCode.E; // Key to press (E for PC)
-    public KeyCode exitKey = KeyCode.Escape; // Key to exit puzzle view
-    
+    public KeyCode interactKey = KeyCode.E;
+    public KeyCode exitKey = KeyCode.Escape;
+
     private bool playerNearby = false;
     private bool isPuzzleView = false;
     private bool isTransitioning = false;
-    
-    // Store original camera info
+
     private Transform originalCameraParent;
     private Vector3 originalLocalPosition;
     private Quaternion originalLocalRotation;
     private PlayerMovement playerMovement;
+    private VialClickMover selectedVial;
 
     void Start()
     {
-        // Hide the notification at start
-        if (notificationBox != null)
-            notificationBox.SetActive(false);
-            
-        // Find player movement script
-        playerMovement = FindObjectOfType<PlayerMovement>();
-        
-        // Store original camera parent and local transform
+        if (notificationBox != null) notificationBox.SetActive(false);
+        if (replayButton != null) replayButton.SetActive(false);
+        if (filterCubeRenderer != null) filterCubeRenderer.enabled = false;
+
+        playerMovement = Object.FindFirstObjectByType<PlayerMovement>();
+
+        if (colorFeedback == null)
+            colorFeedback = Object.FindFirstObjectByType<ColorFeedbackManager>();
+
         if (puzzleCamera != null)
         {
             originalCameraParent = puzzleCamera.parent;
@@ -46,70 +54,64 @@ public class TableInteraction : MonoBehaviour
 
     void Update()
     {
-        // Check for interaction input when near table
         if (playerNearby && !isPuzzleView && !isTransitioning)
         {
-            // PC/Laptop - Keyboard
             if (Input.GetKeyDown(interactKey))
-            {
                 EnterPuzzleView();
-            }
-            
-            // Mobile - Touch (tap anywhere on screen)
-            if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
-            {
-                EnterPuzzleView();
-            }
         }
-        
-        // Exit puzzle view - ONLY when in puzzle mode
+
         if (isPuzzleView && !isTransitioning)
         {
-            // Press ESC or E to exit
-            if (Input.GetKeyDown(exitKey) || Input.GetKeyDown(interactKey))
-            {
+            // Exit logic
+            if (Input.GetKeyDown(exitKey))
                 ExitPuzzleView();
-            }
-            
-            // Mobile - tap to exit
-            if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
-            {
-                ExitPuzzleView();
-            }
-        }
-    }
 
-    void OnTriggerEnter(Collider other)
-    {
-        // Check if the player entered the trigger zone
-        if (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null)
-        {
-            playerNearby = true;
-            
-            // Show the notification
-            if (notificationBox != null)
-            {
-                notificationBox.SetActive(true);
-                if (notificationText != null)
-                    notificationText.text = "Press E to examine puzzle";
-            }
-                
-            Debug.Log("Player can interact with table!");
-        }
-    }
+            // --- CAMERA MOVEMENT ---
+            float moveSpeed = 1.5f;
+            float moveX = Input.GetAxis("Horizontal");
+            float moveZ = Input.GetAxis("Vertical");
+            Vector3 move = puzzleCamera.right * moveX + puzzleCamera.forward * moveZ;
+            puzzleCamera.position += move * moveSpeed * Time.deltaTime;
 
-    void OnTriggerExit(Collider other)
-    {
-        // Check if the player left the trigger zone
-        if (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null)
-        {
-            playerNearby = false;
-            
-            // Hide the notification (only if not in puzzle view)
-            if (!isPuzzleView && notificationBox != null)
-                notificationBox.SetActive(false);
-                
-            Debug.Log("Player left table area");
+            // --- VIAL SELECTION (MOUSE) ---
+            if (Input.GetMouseButtonDown(0))
+            {
+                Camera cam = puzzleCamera.GetComponent<Camera>();
+                Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+                RaycastHit hit;
+                if (Physics.Raycast(ray, out hit, 10f))
+                {
+                    VialClickMover mover = hit.collider.GetComponent<VialClickMover>();
+                    if (mover != null)
+                    {
+                        // Reset previous vial if necessary, then select new one
+                        if (selectedVial != null && selectedVial != mover)
+                            selectedVial.ResetTilt();
+
+                        selectedVial = mover;
+                        mover.ResetTilt();   // ✅ always reset tilt when clicked
+                        mover.ToggleMove();  // ✅ move up/down
+                    }
+                }
+            }
+
+            // --- POUR LIQUID (Q) ---
+            if (Input.GetKeyDown(KeyCode.Q) && selectedVial != null)
+            {
+                // ✅ Only tilt if vial is up
+                if (selectedVial.IsUp)
+                {
+                    selectedVial.Tilt();
+                    if (puzzleManager != null)
+                        puzzleManager.PlayerSelected(selectedVial);
+                }
+            }
+
+            // --- RESET VIAL (R) ---
+            if (Input.GetKeyDown(KeyCode.R) && selectedVial != null)
+            {
+                selectedVial.ResetTilt();
+            }
         }
     }
 
@@ -117,25 +119,20 @@ public class TableInteraction : MonoBehaviour
     {
         isPuzzleView = true;
         isTransitioning = true;
-        Debug.Log("Entering puzzle view!");
-        
-        // DISABLE ALL PLAYER CONTROLS
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = false;
-        }
-        
-        // Unlock and show cursor for puzzle interaction
+
+        if (filterCubeRenderer != null) filterCubeRenderer.enabled = true;
+        if (playerMovement != null) playerMovement.enabled = false;
+
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        
-        // Detach camera from player head
-        if (puzzleCamera != null)
-        {
-            puzzleCamera.SetParent(null);
-        }
-        
-        // Start smooth transition to puzzle view
+
+        if (replayButton != null) replayButton.SetActive(true);
+
+        // Tell puzzle manager to show sequence when entering
+        if (puzzleManager != null)
+            puzzleManager.ReplaySequence();
+
+        puzzleCamera.SetParent(null);
         StartCoroutine(TransitionCameraToPuzzle());
     }
 
@@ -143,89 +140,107 @@ public class TableInteraction : MonoBehaviour
     {
         isPuzzleView = false;
         isTransitioning = true;
-        Debug.Log("Exiting puzzle view!");
-        
-        // Start smooth transition back to player
+
+        if (filterCubeRenderer != null) filterCubeRenderer.enabled = false;
+        if (replayButton != null) replayButton.SetActive(false);
+
         StartCoroutine(TransitionCameraToPlayer());
     }
-    
-    System.Collections.IEnumerator TransitionCameraToPuzzle()
+
+    public void UpdateFilter(float red, float green, float blue, float satValue)
     {
-        float elapsed = 0f;
-        Vector3 startPos = puzzleCamera.position;
-        Quaternion startRot = puzzleCamera.rotation;
-        
-        Vector3 targetPos = puzzleViewPosition.position;
-        Quaternion targetRot = puzzleViewPosition.rotation;
-        
-        while (elapsed < 1f)
+        if (filterCubeRenderer != null && filterCubeRenderer.material != null)
         {
-            elapsed += Time.deltaTime * transitionSpeed;
-            
-            puzzleCamera.position = Vector3.Lerp(startPos, targetPos, elapsed);
-            puzzleCamera.rotation = Quaternion.Slerp(startRot, targetRot, elapsed);
-            
-            yield return null;
-        }
-        
-        // Ensure final position is exact
-        puzzleCamera.position = targetPos;
-        puzzleCamera.rotation = targetRot;
-        
-        isTransitioning = false;
-        
-        // Update notification
-        if (notificationBox != null && notificationText != null)
-        {
-            notificationText.text = "Press E or ESC to exit";
+            filterCubeRenderer.material.SetFloat("_RedMultiplier", red);
+            filterCubeRenderer.material.SetFloat("_GreenMultiplier", green);
+            filterCubeRenderer.material.SetFloat("_BlueMultiplier", blue);
+            filterCubeRenderer.material.SetFloat("_Saturation", satValue);
         }
     }
-    
-    System.Collections.IEnumerator TransitionCameraToPlayer()
+
+    // --- TRANSITION COROUTINES ---
+
+    IEnumerator TransitionCameraToPuzzle()
     {
         float elapsed = 0f;
         Vector3 startPos = puzzleCamera.position;
         Quaternion startRot = puzzleCamera.rotation;
-        
-        // Calculate target world position
-        Vector3 targetWorldPos = originalCameraParent.TransformPoint(originalLocalPosition);
-        Quaternion targetWorldRot = originalCameraParent.rotation * originalLocalRotation;
-        
+
+        float distance = 1.1f;
+        Vector3 forward = transform.forward;
+
+        Vector3 lookAtPoint = transform.position - transform.right * 1.5f;
+        Vector3 targetPos = lookAtPoint - forward * distance + Vector3.up * 0.35f;
+        Quaternion targetRot = Quaternion.LookRotation(lookAtPoint - targetPos);
+
         while (elapsed < 1f)
         {
             elapsed += Time.deltaTime * transitionSpeed;
-            
-            puzzleCamera.position = Vector3.Lerp(startPos, targetWorldPos, elapsed);
-            puzzleCamera.rotation = Quaternion.Slerp(startRot, targetWorldRot, elapsed);
-            
+            puzzleCamera.position = Vector3.Lerp(startPos, targetPos, elapsed);
+            puzzleCamera.rotation = Quaternion.Slerp(startRot, targetRot, elapsed);
             yield return null;
         }
-        
-        // Re-attach camera to player head
-        puzzleCamera.SetParent(originalCameraParent);
+
+        isTransitioning = false;
+        if (notificationText != null) notificationText.text = "Press ESC to exit";
+    }
+
+    IEnumerator TransitionCameraToPlayer()
+    {
+        float elapsed = 0f;
+        Vector3 startPos = puzzleCamera.position;
+        Quaternion startRot = puzzleCamera.rotation;
+
+        Vector3 targetWorldPos = (originalCameraParent != null) ?
+            originalCameraParent.TransformPoint(originalLocalPosition) : originalLocalPosition;
+        Quaternion targetWorldRot = (originalCameraParent != null) ?
+            originalCameraParent.rotation * originalLocalRotation : originalLocalRotation;
+
+        while (elapsed < 1f)
+        {
+            elapsed += Time.deltaTime * transitionSpeed;
+            puzzleCamera.position = Vector3.Lerp(startPos, targetWorldPos, elapsed);
+            puzzleCamera.rotation = Quaternion.Slerp(startRot, targetWorldRot, elapsed);
+            yield return null;
+        }
+
+        if (originalCameraParent != null) puzzleCamera.SetParent(originalCameraParent);
         puzzleCamera.localPosition = originalLocalPosition;
         puzzleCamera.localRotation = originalLocalRotation;
-        
+
         isTransitioning = false;
-        
-        // RE-ENABLE PLAYER CONTROLS
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = true;
-        }
-        
-        // Lock cursor again for first-person view
+        if (playerMovement != null) playerMovement.enabled = true;
+
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-        
-        // Hide notification if player left the area
+
         if (!playerNearby && notificationBox != null)
-        {
             notificationBox.SetActive(false);
-        }
         else if (notificationText != null)
-        {
             notificationText.text = "Press E to examine puzzle";
+    }
+
+    // --- TRIGGER LOGIC ---
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null)
+        {
+            playerNearby = true;
+            if (notificationBox != null)
+            {
+                notificationBox.SetActive(true);
+                notificationText.text = "Press E to examine puzzle";
+            }
+        }
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null)
+        {
+            playerNearby = false;
+            if (!isPuzzleView && notificationBox != null) notificationBox.SetActive(false);
         }
     }
 }
